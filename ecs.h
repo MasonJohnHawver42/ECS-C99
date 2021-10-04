@@ -1,11 +1,13 @@
+
 #include <stdlib.h>
 #include <stdarg.h>
 
+typedef enum {true, false} bool;
+
+typedef u_int32_t uint32_t;
+
 const uint32_t MAX_COMPONETS = 32;
 const uint32_t MAX_ENTITIES = 128;
-
-// Allows for easier use of the VEX Library
-using namespace vex;
 
 typedef uint32_t Entity;
 typedef uint32_t Componet;
@@ -23,7 +25,7 @@ void addComponet_EntityMask(EntityMask * em, Componet c) {
     em->mask = em->mask | comp;
 }
 
-void removeComponet_EntityMask(EntityMask * em, Componet c) {
+void delComponet_EntityMask(EntityMask * em, Componet c) {
     uint32_t comp = 0x1;
     comp = comp << c;
     em->mask = em->mask & (~comp);
@@ -32,6 +34,22 @@ void removeComponet_EntityMask(EntityMask * em, Componet c) {
 bool hasComponetEh_EntityMask(EntityMask * em, Componet c) {
     uint32_t comp = em->mask >> c;
     return comp & 0x1; 
+}
+
+bool hasComponets_EntityMask(EntityMask * em, int size, Componet * cs) {
+    
+    uint32_t comps = 0;
+    
+    for (int i = 0; i < size; i++) {
+        Componet c = *(cs + i);
+        uint32_t comp = 0x1;
+        comp = comp << c;
+        
+        comps = comps | comp;
+    }
+    
+    return (((em->mask & comps) - comps) == 0);
+    
 }
 
 typedef struct {
@@ -83,7 +101,7 @@ void new_ecs(ecs * w) {
     new_EntityPool(&w->ep);
 }
 
-Componet addComponet_ecs(ecs * w, size_t size) {
+Componet newComponet_ecs(ecs * w, size_t size) {
     
     Componet id = w->used;
     w->used++;
@@ -120,8 +138,15 @@ Entity addEntity_ecs(ecs * w, uint32_t componet_num, ...) {
     return w->ep.used - 1;
 }
 
-void addComponet_ecs(ecs * w, Entity e, Componet c) {}
-void delComponet_ecs(ecs * w, Entity e, Componet c) {}
+void addComponet_ecs(ecs * w, Entity e, Componet c) {
+    EntityMask* em = w->ep.masks + c;
+    addComponet_EntityMask(em, c);
+}
+
+void delComponet_ecs(ecs * w, Entity e, Componet c) {
+    EntityMask* em = w->ep.masks + c;
+    delComponet_EntityMask(em, c);
+}
 
 void * getComponet_ecs(ecs * w, Entity e, Componet c) {
     ComponetPool * cp = w->pools + c;
@@ -140,8 +165,8 @@ int main() {
     ecs world;
     new_ecs(&world);
 
-    Componet pos = addComponet_ecs(&world, sizeof(Pos));
-    Componet vel = addComponet_ecs(&world, sizeof(Vel));
+    Componet pos = newComponet_ecs(&world, sizeof(Pos));
+    Componet vel = newComponet_ecs(&world, sizeof(Vel));
 
     Entity test = addEntity_ecs(&world, 2, pos, vel);
 
@@ -149,5 +174,6 @@ int main() {
     
     p->x = 10;
     p->y = 10;
-
+    
+    return 0;
 }
