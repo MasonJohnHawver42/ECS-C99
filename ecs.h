@@ -52,16 +52,29 @@ bool hasComponets_EntityMask(EntityMask * em, int size, Componet * cs) {
     
 }
 
+
 typedef struct {
     EntityMask * masks;
     uint32_t cap;
-    uint32_t used;
 } EntityPool;
 
 void new_EntityPool(EntityPool * ep) {
     ep->masks = (EntityMask*)malloc(sizeof(EntityMask) * MAX_ENTITIES);
     ep->cap = MAX_ENTITIES;
-    ep->used = 0;
+	
+	//todo queue sys for ids;
+}
+
+Entity add_EntityPool(EntityPool * ep) {
+	return 0; 
+}
+
+void remove_EntityPool(EntityPool * ep, Entity e) {
+
+}
+
+EntityMask * getMask_EntityPool(EntityPool * ep, Entity e) {
+	return 
 }
 
 typedef struct {
@@ -115,14 +128,7 @@ Componet newComponet_ecs(ecs * w, size_t size) {
 
 Entity addEntity_ecs(ecs * w, uint32_t componet_num, ...) {
 
-    for (int i = 0; i < w->used; i++) {
-        ComponetPool * cp = w->pools + i;
-        cp->used++;
-    }
-
-    EntityMask * em = w->ep.masks + w->ep.used;
-
-    new_EntityMask(em);
+    Entity e = add_EntityPool(w->ep);
 
     va_list componets;
     va_start(componets, componet_num);
