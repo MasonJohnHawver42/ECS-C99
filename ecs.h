@@ -6,6 +6,56 @@ typedef enum {true, false} bool;
 
 typedef u_int32_t uint32_t;
 
+struct node_;
+struct node_ { uint32_t id; struct node_ * next; };
+typedef struct node_ node;
+
+typedef struct {
+    node * head;
+    node * last;
+    uint32_t length;
+} Queue;
+
+void new_Queue(Queue * q) { q->length = 0; }
+void add_Queue(Queue * q, uint32_t data) {
+    node * new_node = malloc(sizeof(node));
+    new_node->id = data;
+    
+    if (q->length == 0) {
+        q->head = new_node;
+        q->last = new_node;
+    }
+    else {
+        q->last->next = new_node;
+        q->last = new_node;
+    }
+    
+    q->length++;
+}
+
+uint32_t pop_Queue(Queue * q) {
+    if (q->length == 0) { return 0; }
+    
+    node * ret_node = q->head;
+    
+    if (q->length == 1) {
+        q->head = NULL;
+        q->last = NULL;
+        q->length--;
+        uint32_t res = ret_node->id;
+        free(ret_node);
+        
+        return res;
+    }
+    
+    q->head = ret_node->next;
+    q->length--;
+    uint32_t res = ret_node->id;
+    free(ret_node);
+    
+    return res;
+}
+
 const uint32_t MAX_COMPONETS = 32;
 const uint32_t MAX_ENTITIES = 128;
 
