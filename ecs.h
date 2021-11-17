@@ -1,6 +1,9 @@
-
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdio.h>
+
+#define Mask_Amt 3
+#define Max_Entities 5
 
 typedef enum {true, false} bool;
 
@@ -58,9 +61,6 @@ uint32_t pop_Queue(Queue * q) {
     return res;
 }
 
-const uint32_t MAX_COMPONETS = 32;
-const uint32_t MAX_ENTITIES = 128;
-
 typedef uint32_t Entity;
 typedef uint32_t Componet;
 
@@ -116,28 +116,22 @@ bool hasComponetEh_EntityMask(EntityMask * em, Componet c) {
 /// Entity Pool
 
 typedef struct {
-    EntityMask * masks;
-    uint32_t cap;
+    EntityMask masks[Max_Entities];
+    Queue ids;
 } EntityPool;
 
 void new_EntityPool(EntityPool * ep) {
-    ep->masks = (EntityMask*)malloc(sizeof(EntityMask) * MAX_ENTITIES);
-    ep->cap = MAX_ENTITIES;
-	
-	//todo queue sys for ids;
+    new_Queue(&ep->ids);
+    for (int i = 0; i < Max_Entities; i++) { new_EntityMask(&(ep->masks[i])); add_Queue(&ep->ids, i); }
 }
 
-Entity add_EntityPool(EntityPool * ep) {
-	return 0; 
+Entity addEntity_EntityPool(EntityPool * ep) { return pop_Queue(&ep->ids); }
+void removeEntity_EntityPool(EntityPool * ep, Entity e) {
+    add_Queue(&ep->ids, e);
+    new_EntityMask(&(ep->masks[e]));
 }
 
-void remove_EntityPool(EntityPool * ep, Entity e) {
-
-}
-
-EntityMask * getMask_EntityPool(EntityPool * ep, Entity e) {
-	return 
-}
+EntityMask * getEM_EntityPool(EntityPool * ep, Entity e) { return &(ep->masks[e]); }
 
 typedef struct {
     void * data;
