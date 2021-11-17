@@ -63,43 +63,68 @@ typedef uint32_t Entity;
 typedef uint32_t Componet;
 
 
-typedef struct { uint32_t mask; } EntityMask;
+typedef struct { uint32_t masks[Mask_Amt]; } EntityMask;
 
-void new_EntityMask(EntityMask * em) {
-    em->mask = 0;
+void new_EntityMask(EntityMask * em) { for (int i = 0; i < Mask_Amt; i++) { em->masks[i] = 0; } }
+
+void print_EntitMask(EntityMask * em) {
+    for (int i = 0; i < Mask_Amt; i++) {
+        
+        uint32_t mask = em->masks[i];
+        
+        for (int j = 31; j >= 0; j--) {
+            uint32_t tell = 0x1;
+            tell = tell << j;
+            tell = mask & tell;
+            if (tell == 0x0) { printf("0"); }
+            else { printf("1"); }
+        }
+        
+        printf("\n");
+        
+    } 
 }
 
 void addComponet_EntityMask(EntityMask * em, Componet c) {
+    
+    uint32_t mask_id = c / 32;
+    uint32_t mask = em->masks[mask_id];
+    
     uint32_t comp = 0x1;
-    comp = comp << c;
-    em->mask = em->mask | comp;
+    comp = comp << (c % 32);
+    em->masks[mask_id] = mask | comp;
 }
 
 void delComponet_EntityMask(EntityMask * em, Componet c) {
+    
+    uint32_t mask_id = c / 32;
+    uint32_t mask = em->masks[mask_id];
+    
     uint32_t comp = 0x1;
-    comp = comp << c;
-    em->mask = em->mask & (~comp);
+    comp = comp << (c % 32);
+    em->masks[mask_id] = mask & (~comp);
 }
 
 bool hasComponetEh_EntityMask(EntityMask * em, Componet c) {
-    uint32_t comp = em->mask >> c;
+    uint32_t comp = em->masks[c / 32] >> (c % 32);
     return comp & 0x1; 
 }
 
-bool hasComponets_EntityMask(EntityMask * em, int size, Componet * cs) {
+// bool hasComponets_EntityMask(EntityMask * em, int size, Componet * cs) {
     
-    uint32_t comps = 0;
+//     uint32_t comps = 0;
     
-    for (int i = 0; i < size; i++) {
-        Componet c = *(cs + i);
-        uint32_t comp = 0x1;
-        comp = comp << c;
+//     for (int i = 0; i < size; i++) {
+//         Componet c = *(cs + i);
+//         uint32_t comp = 0x1;
+//         comp = comp << c;
         
-        comps = comps | comp;
-    }
+//         comps = comps | comp;
+//     }
     
-    return (((em->mask & comps) - comps) == 0);
+//     return (((em->mask & comps) - comps) == 0);
     
+// } 
 }
 
 
