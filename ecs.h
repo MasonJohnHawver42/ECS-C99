@@ -6,6 +6,8 @@ typedef enum {true, false} bool;
 
 typedef u_int32_t uint32_t;
 
+//Queue
+
 struct node_;
 struct node_ { uint32_t id; struct node_ * next; };
 typedef struct node_ node;
@@ -62,6 +64,7 @@ const uint32_t MAX_ENTITIES = 128;
 typedef uint32_t Entity;
 typedef uint32_t Componet;
 
+// Mask
 
 typedef struct { uint32_t masks[Mask_Amt]; } EntityMask;
 
@@ -110,23 +113,7 @@ bool hasComponetEh_EntityMask(EntityMask * em, Componet c) {
     return comp & 0x1; 
 }
 
-// bool hasComponets_EntityMask(EntityMask * em, int size, Componet * cs) {
-    
-//     uint32_t comps = 0;
-    
-//     for (int i = 0; i < size; i++) {
-//         Componet c = *(cs + i);
-//         uint32_t comp = 0x1;
-//         comp = comp << c;
-        
-//         comps = comps | comp;
-//     }
-    
-//     return (((em->mask & comps) - comps) == 0);
-    
-// } 
-}
-
+/// Entity Pool
 
 typedef struct {
     EntityMask * masks;
