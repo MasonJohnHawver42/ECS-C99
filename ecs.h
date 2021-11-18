@@ -1,241 +1,99 @@
 #include <stdlib.h>
-#include <stdarg.h>
-#include <stdio.h>
 
-#define Mask_Amt 3
-#define Max_Entities 5
+#ifndef ECS
+#define ECS
 
-typedef enum {true, false} bool;
+#define MASK_AMT 10
+#define MAX_ENTITIES 1000000
+#define MAX_COMPONETS MASK_AMT * 32
+#define MAX_SYSTEMS 1000
 
+
+typedef enum {false, true} bool;
 typedef u_int32_t uint32_t;
 
 //Queue
 
-struct node_;
-struct node_ { uint32_t id; struct node_ * next; };
+struct node_; struct node_ { uint32_t id; struct node_ * next; };
 typedef struct node_ node;
 
-typedef struct {
-    node * head;
-    node * last;
-    uint32_t length;
-} Queue;
+typedef struct { node * head; node * last; uint32_t length; } Queue;
 
-void new_Queue(Queue * q) { q->length = 0; }
-void add_Queue(Queue * q, uint32_t data) {
-    node * new_node = malloc(sizeof(node));
-    new_node->id = data;
-    
-    if (q->length == 0) {
-        q->head = new_node;
-        q->last = new_node;
-    }
-    else {
-        q->last->next = new_node;
-        q->last = new_node;
-    }
-    
-    q->length++;
-}
-
-uint32_t pop_Queue(Queue * q) {
-    if (q->length == 0) { return 0; }
-    
-    node * ret_node = q->head;
-    
-    if (q->length == 1) {
-        q->head = NULL;
-        q->last = NULL;
-        q->length--;
-        uint32_t res = ret_node->id;
-        free(ret_node);
-        
-        return res;
-    }
-    
-    q->head = ret_node->next;
-    q->length--;
-    uint32_t res = ret_node->id;
-    free(ret_node);
-    
-    return res;
-}
+void new_Queue(Queue * q);
+void add_Queue(Queue * q, uint32_t data);
+uint32_t pop_Queue(Queue * q);
 
 typedef uint32_t Entity;
 typedef uint32_t Componet;
 
 // Mask
 
-typedef struct { uint32_t masks[Mask_Amt]; } EntityMask;
+typedef struct { uint32_t masks[MASK_AMT]; } EntityMask;
 
-void new_EntityMask(EntityMask * em) { for (int i = 0; i < Mask_Amt; i++) { em->masks[i] = 0; } }
-
-void print_EntitMask(EntityMask * em) {
-    for (int i = 0; i < Mask_Amt; i++) {
-        
-        uint32_t mask = em->masks[i];
-        
-        for (int j = 31; j >= 0; j--) {
-            uint32_t tell = 0x1;
-            tell = tell << j;
-            tell = mask & tell;
-            if (tell == 0x0) { printf("0"); }
-            else { printf("1"); }
-        }
-        
-        printf("\n");
-        
-    } 
-}
-
-void addComponet_EntityMask(EntityMask * em, Componet c) {
-    
-    uint32_t mask_id = c / 32;
-    uint32_t mask = em->masks[mask_id];
-    
-    uint32_t comp = 0x1;
-    comp = comp << (c % 32);
-    em->masks[mask_id] = mask | comp;
-}
-
-void delComponet_EntityMask(EntityMask * em, Componet c) {
-    
-    uint32_t mask_id = c / 32;
-    uint32_t mask = em->masks[mask_id];
-    
-    uint32_t comp = 0x1;
-    comp = comp << (c % 32);
-    em->masks[mask_id] = mask & (~comp);
-}
-
-bool hasComponetEh_EntityMask(EntityMask * em, Componet c) {
-    uint32_t comp = em->masks[c / 32] >> (c % 32);
-    return comp & 0x1; 
-}
+void new_EntityMask(EntityMask * em);
+void print_EntitMask(EntityMask * em);
+void addComponet_EntityMask(EntityMask * em, Componet c);
+void delComponet_EntityMask(EntityMask * em, Componet c);
+bool hasComponetEh_EntityMask(EntityMask * em, Componet c);
 
 /// Entity Pool
 
-typedef struct {
-    EntityMask masks[Max_Entities];
-    Queue ids;
-} EntityPool;
+typedef struct { EntityMask masks[MAX_ENTITIES]; Queue ids; } EntityPool;
 
-void new_EntityPool(EntityPool * ep) {
-    new_Queue(&ep->ids);
-    for (int i = 0; i < Max_Entities; i++) { new_EntityMask(&(ep->masks[i])); add_Queue(&ep->ids, i); }
-}
+void new_EntityPool(EntityPool * ep);
+Entity addEntity_EntityPool(EntityPool * ep);
+void removeEntity_EntityPool(EntityPool * ep, Entity e);
+EntityMask * getEM_EntityPool(EntityPool * ep, Entity e);
 
-Entity addEntity_EntityPool(EntityPool * ep) { return pop_Queue(&ep->ids); }
-void removeEntity_EntityPool(EntityPool * ep, Entity e) {
-    add_Queue(&ep->ids, e);
-    new_EntityMask(&(ep->masks[e]));
-}
+//Componet Pool
 
-EntityMask * getEM_EntityPool(EntityPool * ep, Entity e) { return &(ep->masks[e]); }
+typedef struct { void * data; size_t data_size; } ComponetPool;
 
-typedef struct {
-    void * data;
+void new_ComponetPool(ComponetPool * cp, size_t size);
+void * getComponet_ComponetPool(ComponetPool * cp, Entity e);
 
-    uint32_t cap;
-    uint32_t used;
+void free_ComponetPool(ComponetPool * cp);
 
-    size_t data_size;
+//ECS
 
-} ComponetPool;
-
-void new_ComponetPool(ComponetPool * cp, size_t size) {
-    cp->data = malloc(size * MAX_ENTITIES);
-    cp->used = 0;
-    cp->cap = MAX_ENTITIES;
-
-    cp->data_size = size;
-} 
+typedef uint32_t ComponetID;
 
 typedef struct {
-
-    ComponetPool * pools;
-
-    uint32_t cap;
-    uint32_t used;
-
-    EntityPool ep;
-
+  ComponetPool cps[MAX_COMPONETS]; uint32_t used;
+  Componet look_ups[MAX_COMPONETS];
+  EntityPool ep;
 } ecs;
 
-void new_ecs(ecs * w) {
-    w->pools = (ComponetPool*)malloc(MAX_COMPONETS * sizeof(ComponetPool) );
-    w->used = 0;
-    w->cap = MAX_COMPONETS;
+//todo safe gaurd methods bellow
 
-    new_EntityPool(&w->ep);
-}
+void new_ECS(ecs * w);
 
-Componet newComponet_ecs(ecs * w, size_t size) {
-    
-    Componet id = w->used;
-    w->used++;
+Componet addComponet_ECS(ecs * w, size_t size, ComponetID id);
 
-    if (w->used < w->cap) {
-        new_ComponetPool(w->pools + w->used, size);
-    }
+Entity addEntity_ECS(ecs * w, uint32_t componet_num, ...);
+void removeEntity_ECS(ecs * w, Entity e);
 
-    return id;
-}
+void setEntityComponet_ECS(ecs * w, Entity e, Componet c, bool state);
+bool hasEntityComponets_ECS(ecs * w, Entity e, int componet_num, ...);
+void * getEntityComponet_ECS(ecs * w, Entity e, Componet c);
 
-Entity addEntity_ecs(ecs * w, uint32_t componet_num, ...) {
+Componet lookUpComponet_ECS(ecs * w, ComponetID id);
 
-    Entity e = add_EntityPool(w->ep);
+void free_ECS(ecs * world);
 
-    va_list componets;
-    va_start(componets, componet_num);
+//System
 
-    for (int i = 0; i < componet_num; i++) {
-        Componet c = va_arg(componets, Componet);
-        addComponet_EntityMask(em, c);
-    }
-	
-   va_end(componets);
-
-    w->ep.used++;
-    return w->ep.used - 1;
-}
-
-void addComponet_ecs(ecs * w, Entity e, Componet c) {
-    EntityMask* em = w->ep.masks + c;
-    addComponet_EntityMask(em, c);
-}
-
-void delComponet_ecs(ecs * w, Entity e, Componet c) {
-    EntityMask* em = w->ep.masks + c;
-    delComponet_EntityMask(em, c);
-}
-
-void * getComponet_ecs(ecs * w, Entity e, Componet c) {
-    ComponetPool * cp = w->pools + c;
-    void * comp = cp->data + e;
-
-    return comp;
-}
+typedef void (*System)(ecs * world, float dt, void * data);
 
 typedef struct {
-    double x;
-    double y;
-} Pos, Vel;
+  System systems[MAX_SYSTEMS];
+  uint32_t used;
+} Pipeline;
 
-int main() {
+void new_Pipeline(Pipeline * pipe);
+void add_Pipeline(Pipeline * pipe, System sys);
 
-    ecs world;
-    new_ecs(&world);
+void updateECS_Pipeline(Pipeline * pipe, ecs * world, float dt, void * data);
 
-    Componet pos = newComponet_ecs(&world, sizeof(Pos));
-    Componet vel = newComponet_ecs(&world, sizeof(Vel));
 
-    Entity test = addEntity_ecs(&world, 2, pos, vel);
-
-    Pos * p = (Pos*)getComponet_ecs(&world, test, pos);
-    
-    p->x = 10;
-    p->y = 10;
-    
-    return 0;
-}
+#endif /* end of include guard: ECS */
